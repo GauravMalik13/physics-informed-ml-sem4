@@ -88,7 +88,7 @@ N_FREQ = F_HI_BIN - F_LOW_BIN
 
 PSD_SMOOTH = 15
 
-WINDOW = get_window(WIN_TYPE, N_FFT).astype(np.float32) # type: ignore
+WINDOW = get_window(WIN_TYPE, N_FFT).astype(np.float32)  # type: ignore
 
 isTimed = False  # If True will print the time taken by all the function
 
@@ -502,22 +502,63 @@ def get_shard_splits(
 
 # # -- 9. Sanity check --
 if __name__ == "__main__":
+    import sys
+    from pathlib import Path
+
+    data_dir = "data/"
+    file_path = Path(data_dir)
+    signal_file_path = file_path / "signal"
+    signal_paths = sorted([path for path in signal_file_path.iterdir()])
+    print(signal_paths)
+    paths = signal_paths
+    if len(signal_paths) == 0:
+        print(f"No shards found in {data_dir}")
+        sys.exit(1)
+
+    print(f"\nFound {len(paths)} shards")
+    print("\nSTFT settings:")
+    print(f" Window : {N_FFT} samples = {N_FFT / SAMPLE_RATE * 1000:.0f} ms")
+    print(f" Hop : {HOP} samples = {HOP / SAMPLE_RATE * 1000:.0f} ms")
+    print(f" T frames : {N_FRAMES}")
+    print(
+        f" F bins : {N_FREQ} "
+        f"({F_LOW_BIN * BIN_RES:.0f}–{(F_HI_BIN - 1) * BIN_RES:.0f} Hz)"
+    )
+    print(f" Shape : ({N_FRAMES}, {N_FREQ}) complex64")
+    param_path = get_param_path(paths[0])
+    shard = load_shard_only(paths[0], param_path)
+    label = ["mixture", "h1", "h2", "params1", "params2"]
+    print("\nOutput shapes:")
+    for label, data in zip(label, shard):
+        print(f" {label}: {data.shape} {data.dtype}")
+
+    print("\nWhitening check:")
+    print(f" mixture |X| mean : {np.abs(shard[0]).mean():.4f} (should be ~1.0)")
+    print(f" h1 |X| mean : {np.abs(shard[1]).mean():.4f}")
+    print(f" h2 |X| mean : {np.abs(shard[2]).mean():.4f}")
+    print("\nBatch test:")
+    it = batch_iterator(paths[:1], batch_size=40, shuffle=False)
+    batch = next(it)
+
+    for k, v in batch.items():
+        print(f" {k:10s}: {v.shape} {v.dtype}")
+    get_shard_splits(data_dir)
     # path1 = [r"data/signal/s_shard_0001.npy", r"data/signal/s_shard_0002.npy"]
     # path2 = [r"data/shard_0001.h5", r"data/shard_0002.h5", r"data/shard_0003.h5", r"data/shard_0004.h5", r"data/shard_0005.h5"]
     # for data in batch_iterator(path1, batch_size=80):
-        ...
-        # mix = data["mixture"]
-        # h1 = data["h1"]
-        # h2 = data["h2"]
-        # psd = data["psd"]
-        # params1 = data["params1"]
-        # params2 = data["params2"]
-        # print(f"mix: {mix.shape}")
-        # print(f"h1: {h1.shape}")
-        # print(f"h2: {h2.shape}")
-        # print(f"psd: {psd.shape}")
-        # print(f"params1: {params1.shape}")
-        # print(f"params2: {params2.shape}")
+    # ...
+    # mix = data["mixture"]
+    # h1 = data["h1"]
+    # h2 = data["h2"]
+    # psd = data["psd"]
+    # params1 = data["params1"]
+    # params2 = data["params2"]
+    # print(f"mix: {mix.shape}")
+    # print(f"h1: {h1.shape}")
+    # print(f"h2: {h2.shape}")
+    # print(f"psd: {psd.shape}")
+    # print(f"params1: {params1.shape}")
+    # print(f"params2: {params2.shape}")
     # load_shard(path)
     # load_shard_jax(path)
     # load_shard_jax(path)
@@ -543,40 +584,6 @@ if __name__ == "__main__":
     #     t2 = perf_counter()
     #     print(f"Time taken by batch iterator: {t1 - t0:.6f}s")
     #     print(f"Time taken by batch iterator prefetch: {t2 - t1:.6f}s")
-#     import sys
-#     data_dir = "/scratch/ph24mscs11029.ph.iith/gw_data/4s"
-#     paths = sorted(glob.glob(os.path.join(data_dir, "shard_*.h5")))
-#     if len(paths) == 0:
-#         print(f"No shards found in {data_dir}")
-#         sys.exit(1)
-
-#     print(f"\nFound {len(paths)} shards")
-#     print(f"\nSTFT settings:")
-#     print(f" Window : {N_FFT} samples = {N_FFT/SAMPLE_RATE*1000:.0f} ms")
-#     print(f" Hop : {HOP} samples = {HOP/SAMPLE_RATE*1000:.0f} ms")
-#     print(f" T frames : {N_FRAMES}")
-#     print(f" F bins : {N_FREQ} "
-#     f"({F_LOW_BIN*BIN_RES:.0f}–{(F_HI_BIN-1)*BIN_RES:.0f} Hz)")
-#     print(f" Shape : ({N_FRAMES}, {N_FREQ}) complex64")
-
-#     shard = load_shard(paths[0])
-
-#     print("\nOutput shapes:")
-#     for k, v in shard.items():
-#         print(f" {k:10s}: {v.shape} {v.dtype}")
-
-#     print(f"\nWhitening check:")
-#     print(f" mixture |X| mean : {np.abs(shard['mixture']).mean():.4f}"
-#     f" (should be ~1.0)")
-#     print(f" h1 |X| mean : {np.abs(shard['h1']).mean():.4f}")
-#     print(f" h2 |X| mean : {np.abs(shard['h2']).mean():.4f}")
-#     print(f"\nBatch test:")
-#     it = batch_iterator(paths[:1], batch_size=8, shuffle=False)
-#     batch = next(it)
-
-#     for k, v in batch.items():
-#         print(f" {k:10s}: {v.shape} {v.dtype}")
-#     get_shard_splits(data_dir)
 
 
 # v2.0

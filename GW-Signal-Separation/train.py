@@ -43,7 +43,7 @@ class Config:
     n_heads = 8
 
     # Training
-    batch_size = 80
+    batch_size = 40
     lr = 3e-4
     weight_decay = 1e-4
     n_epochs = 50
