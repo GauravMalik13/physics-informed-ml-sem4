@@ -39,7 +39,7 @@ class Config:
     n_freqs = N_FREQ
     encoder_dims = [512, 512, 256, 128]
     decoder_dims = [128, 256, 512, 512]
-    latent_dim = 512  
+    latent_dim = 512
     n_heads = 8
 
     # Training
@@ -129,11 +129,12 @@ def run_epoch(state, shard_paths, rng, training=True):
             si_snrs.append(m["si_snr_db"])
             rhos.append(m["overlap_rho"])
 
-        total_loss += float(loss)
+        loss_val = jax.device_get(loss)
+        total_loss += loss_val
         n_batches += 1
 
         if n_batches % cfg.log_every == 0:
-            print(f"  batch {n_batches:5d} | loss {float(loss):.4f}")
+            print(f"  batch {n_batches:5d} | loss {loss_val:.4f}")
 
     mean_loss = total_loss / max(n_batches, 1)
     metrics = {}
@@ -249,9 +250,9 @@ def train(data_dir, out_dir, resume=False, max_shards=None):
     print(f" test_SI-SNR: {test_m.get('si_snr_db', 0):.2f} dB")
     print(f" test_rho : {test_m.get('overlap_rho', 0):.4f}")
 
-    history["best_epoch"] = best_epoch
-    history["best_val_loss"] = float(best_val)
-    history["test_loss"] = float(test_loss)
+    history["best_epoch"] = best_epoch  # type: ignore
+    history["best_val_loss"] = float(best_val)  # type: ignore
+    history["test_loss"] = float(test_loss)  # type: ignore
     history["test_sisnr"] = test_m.get("si_snr_db", 0.0)
     history["test_rho"] = test_m.get("overlap_rho", 0.0)
     with open(os.path.join(out_dir, "history.json"), "w") as f:
