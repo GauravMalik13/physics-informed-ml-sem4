@@ -60,20 +60,14 @@ Shape : (62 frames, 126 bins) complex64
 """
 
 # -- 1. Setup and Imports --
-import os
-import glob
-import h5py
 import numpy as np
 from pathlib import Path
 import jax
-from time import perf_counter
 import jax.numpy as jnp
 from jax.scipy.signal import convolve
 from scipy.signal import get_window
 from scipy.ndimage import convolve1d
-from typing import Iterator, Generator
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from collections import deque
+from typing import Iterator
 from utils import timeit
 
 # -- 2. Constants --
@@ -94,9 +88,9 @@ N_FREQ = F_HI_BIN - F_LOW_BIN
 
 PSD_SMOOTH = 15
 
-WINDOW = get_window(WIN_TYPE, N_FFT).astype(np.float32)
+WINDOW = get_window(WIN_TYPE, N_FFT).astype(np.float32) # type: ignore
 
-isTimed = True  # If True will print the time taken by all the function
+isTimed = False  # If True will print the time taken by all the function
 
 
 # -- 3. STFT --
@@ -350,7 +344,7 @@ def create_batches(
     return mixture, h1, h2, params1, params2
 
 
-@timeit(enabled=True)
+@timeit(enabled=isTimed)
 @jax.jit
 def process_data(mixture_batch, h1_batch, h2_batch) -> tuple[jnp.ndarray, ...]:
 
@@ -404,7 +398,7 @@ def batch_iterator(
     signal_paths: list[Path],
     batch_size: int = 8,
     shuffle: bool = True,
-    rng: np.random.Generator = None,
+    rng: np.random.Generator | None = None,
 ) -> Iterator[dict]:
     """
     Yield batches of JAX arrays for training.
@@ -508,9 +502,9 @@ def get_shard_splits(
 
 # # -- 9. Sanity check --
 if __name__ == "__main__":
-    path1 = [r"data/signal/s_shard_0001.npy", r"data/signal/s_shard_0002.npy"]
+    # path1 = [r"data/signal/s_shard_0001.npy", r"data/signal/s_shard_0002.npy"]
     # path2 = [r"data/shard_0001.h5", r"data/shard_0002.h5", r"data/shard_0003.h5", r"data/shard_0004.h5", r"data/shard_0005.h5"]
-    for data in batch_iterator(path1, batch_size=80):
+    # for data in batch_iterator(path1, batch_size=80):
         ...
         # mix = data["mixture"]
         # h1 = data["h1"]
